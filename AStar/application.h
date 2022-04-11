@@ -12,13 +12,15 @@ public:
 	int Update();
 	void Render();
 	void InitGrid();
-	void FindGridSquareCollision(sf::RenderWindow*, sf::Color);
+	void FindGridSquareCollision(sf::RenderWindow*, bool);
 
 	const static int gridWidth = 5;
 	const static int gridHeight = 4;
 	const float shapeWidth = WINDOW_WIDTH / gridWidth;
 	const float shapeHeight = WINDOW_HEIGHT / gridHeight;
 	Node grid[gridWidth][gridHeight];
+	Node* startNode;
+	Node* endNode;
 	sf::RenderWindow* window;
 	sf::Font myFont;
 };

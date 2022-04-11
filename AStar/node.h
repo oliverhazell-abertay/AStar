@@ -5,8 +5,8 @@ class Node
 {
 public:
 	Node();
-	void Init(sf::Vector2f, sf::Vector2f, sf::Font*);
-	void Update();
+	void Init(sf::Vector2f, sf::Vector2f, sf::Vector2i, sf::Font*);
+	void Update(Node*, Node*);
 	void Render(sf::RenderWindow* window);
 
 	sf::Vector2f GetWorldPos() { return worldPos; }
@@ -26,12 +26,17 @@ public:
 	sf::RectangleShape shape;
 	// Font
 	sf::Font* font;
+	// Position in array
+	sf::Vector2i gridPos;
+	// Calculate gCost, hCost, fCost
+	int CalculateG(Node*);
+	int CalculateH(Node*);
 private:
 	sf::Vector2f worldPos;
 	sf::Vector2f size;
 	// fgh costs
 	int fCost, gCost, hCost;
 	// Text
-	sf::Text gCostText;
+	sf::Text gCostText, hCostText, fCostText;
 };
 

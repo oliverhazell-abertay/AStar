@@ -10,6 +10,12 @@ void Application::CleanUp()
 {
     delete window;
     window = NULL;
+
+    delete startNode;
+    startNode = NULL;
+
+    delete endNode;
+    endNode = NULL;
 }
 
 int Application::Update()
@@ -30,12 +36,12 @@ int Application::Update()
             // Left Mouse button - Change grid square to green
             if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
             {
-                FindGridSquareCollision(window, sf::Color::Green);
+                FindGridSquareCollision(window, true);
             }
-            // Left Mouse button - Change grid square to white
+            // Right Mouse button - Change grid square to white
             if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
             {
-                FindGridSquareCollision(window, sf::Color::White);
+                FindGridSquareCollision(window, false);
             }
         }
         // Update nodes
@@ -43,7 +49,7 @@ int Application::Update()
         {
             for (int j = 0; j < gridHeight; j++)
             {
-                grid[i][j].Update();
+                grid[i][j].Update(startNode, endNode);
             }
         }
         // Render
@@ -74,7 +80,7 @@ void Application::InitGrid()
         for (int j = 0; j < gridHeight; j++)
         {
             // Variables
-            grid[i][j].Init(sf::Vector2f(shapeWidth * i, shapeHeight * j), sf::Vector2f(shapeWidth, shapeHeight), &myFont);
+            grid[i][j].Init(sf::Vector2f(shapeWidth * i, shapeHeight * j), sf::Vector2f(shapeWidth, shapeHeight), sf::Vector2i(i, j), &myFont);
             grid[i][j].shape.setFillColor(sf::Color::White);
             grid[i][j].shape.setOutlineColor(sf::Color::Black);
             grid[i][j].shape.setOutlineThickness(5.0f);
@@ -108,7 +114,7 @@ void Application::InitGrid()
     }
 }
 
-void Application::FindGridSquareCollision(sf::RenderWindow* window, sf::Color color)
+void Application::FindGridSquareCollision(sf::RenderWindow* window, bool leftClick)
 {
     auto mouse_pos = sf::Mouse::getPosition(*window); // Mouse position relative to the window
     auto translated_pos = window->mapPixelToCoords(mouse_pos); // Mouse position translated into world coordinates
@@ -119,7 +125,12 @@ void Application::FindGridSquareCollision(sf::RenderWindow* window, sf::Color co
         {
             if (grid[i][j].shape.getGlobalBounds().contains(translated_pos))
             {
-                grid[i][j].shape.setFillColor(color);
+                // If left clicked, make start node
+                if (leftClick)
+                    startNode = &grid[i][j];
+                // If not then it was right clicked, make end node
+                else
+                    endNode = &grid[i][j];
             }
         }
     }
