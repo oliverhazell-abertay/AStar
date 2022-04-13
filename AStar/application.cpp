@@ -1,4 +1,6 @@
 #include "application.h"
+#include <iostream>
+#include <algorithm>
 
 void Application::Init(sf::RenderWindow* wind)
 {
@@ -10,7 +12,6 @@ void Application::CleanUp()
 {
     delete window;
     window = NULL;
-
     delete startNode;
     startNode = NULL;
 
@@ -33,6 +34,16 @@ int Application::Update()
             // ESC - Close window
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
                 window->close();
+            // Space bar - Find path between nodes
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
+            {
+                if (!findingPath && startNode && endNode)
+                {
+                    findingPath = true;
+                        FindPath();
+                    findingPath = false;
+                }
+            }
             // Left Mouse button - Change grid square to green
             if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
             {
@@ -87,28 +98,28 @@ void Application::InitGrid()
             // Neighbours
             //North
             if (j > 0)
-                grid[i][j].northAdj = &grid[i][j - 1];
+                grid[i][j].neighboursOrth.push_back(&grid[i][j - 1]);
             // South
             if (j < gridHeight - 1)
-                grid[i][j].southAdj = &grid[i][j + 1];
+                grid[i][j].neighboursOrth.push_back(&grid[i][j + 1]);
             // East
             if (i < gridWidth - 1)
-                grid[i][j].eastAdj = &grid[i + 1][j];
+                grid[i][j].neighboursOrth.push_back(&grid[i + 1][j]);
             // West
             if (i > 0)
-                grid[i][j].westAdj = &grid[i - 1][j];
+                grid[i][j].neighboursOrth.push_back(&grid[i - 1][j]);
             //North west
-            if(grid[i][j].northAdj && grid[i][j].westAdj)
-                grid[i][j].northWestAdj = &grid[i - 1][j - 1];
+            if(i > 0 && j > 0)
+                grid[i][j].neighboursDiag.push_back(&grid[i - 1][j - 1]);
             //North east
-            if (grid[i][j].northAdj && grid[i][j].eastAdj)
-                grid[i][j].northEastAdj = &grid[i + 1][j - 1];
+            if (i < gridWidth - 1 && j > 0)
+                grid[i][j].neighboursDiag.push_back(&grid[i + 1][j - 1]);
             //South west
-            if (grid[i][j].southAdj && grid[i][j].westAdj)
-                grid[i][j].southWestAdj = &grid[i - 1][j + 1];
+            if (i > 0 && j < gridHeight - 1)
+                grid[i][j].neighboursDiag.push_back(&grid[i - 1][j + 1]);
             //South east
-            if (grid[i][j].southAdj && grid[i][j].eastAdj)
-                grid[i][j].southEastAdj = &grid[i + 1][j + 1];
+            if (i < gridWidth - 1 && j < gridHeight - 1)
+                grid[i][j].neighboursDiag.push_back(&grid[i + 1][j + 1]);
 
         }
     }
@@ -133,5 +144,105 @@ void Application::FindGridSquareCollision(sf::RenderWindow* window, bool leftCli
                     endNode = &grid[i][j];
             }
         }
+    }
+}
+
+void Application::FindPath()
+{
+    Node* currentNode;
+    currentNode = startNode;
+    while (currentNode != endNode)
+    {
+        // Calculate FGH for neighbours of current node
+        for (auto& it : currentNode->neighboursOrth)
+        {
+            // If not already visited
+            if (std::find(visitedNodes.begin(), visitedNodes.end(), it) == visitedNodes.end())
+            {
+                it->CalculateFGH(startNode, endNode);
+                // Add neighbour to visited nodes if not already visited
+                visitedNodes.push_back(it);
+            }
+        }
+        for (auto& it : currentNode->neighboursDiag)
+        {
+            // If not already visited
+            if (std::find(visitedNodes.begin(), visitedNodes.end(), it) == visitedNodes.end())
+            {
+                it->CalculateFGH(startNode, endNode);
+                // Add neighbour to visited nodes
+                if (std::find(visitedNodes.begin(), visitedNodes.end(), it) == visitedNodes.end())
+                    visitedNodes.push_back(it);
+            }
+        }
+
+        // Add current node to examined
+        examinedNodes.push_back(currentNode);
+
+        // Find node with lowest f value in grid that hasn't been examined
+        int lowestF = 1000000;
+        for (auto& it : visitedNodes)
+        {
+            // If not already visited
+            if (std::find(examinedNodes.begin(), examinedNodes.end(), it) == examinedNodes.end())
+            {
+                if (it->GetFCost() != 0 && it->GetFCost() < lowestF)
+                {
+                    currentNode = it;
+                    lowestF = currentNode->GetFCost();
+                }
+            }
+        }
+    }
+
+    // End node found, start at the end node and find shortest route back
+    currentNode = endNode;
+    Node* nextNode = currentNode;
+    while (currentNode != startNode)
+    {
+        // Find lowest f value of neighbour of current node
+        int lowestF = 100000;
+        for (auto& it : currentNode->neighboursOrth)
+        {
+            // Check if neighbour is start node
+            if (it == startNode)
+                currentNode = it;
+            // Check neighbour isn't already in path
+            else if (std::find(path.begin(), path.end(), it) == path.end())
+            {
+                if (it->GetFCost() != 0 && it->GetFCost() < lowestF)
+                {
+                    lowestF = it->GetFCost();
+                    nextNode = it;
+                }
+            }
+        }
+        for (auto& it : currentNode->neighboursDiag)
+        {
+            // Check if neighbour is start node
+            if (it == startNode)
+                currentNode = it;
+            // Check neighbour isn't already in path
+            else if (std::find(path.begin(), path.end(), it) == path.end())
+            {
+                if (it->GetFCost() != 0 && it->GetFCost() < lowestF)
+                {
+                    lowestF = it->GetFCost();
+                    nextNode = it;
+                }
+            }
+        }
+        // If we're not at the start node, add node to path
+        if (currentNode != startNode)
+        {
+            path.push_back(currentNode);
+            // Prepare for next loop
+            currentNode = nextNode;
+        }
+    }
+    // Colour path
+    for (auto& it : path)
+    {
+        it->shape.setFillColor(sf::Color::Yellow);
     }
 }

@@ -9,26 +9,26 @@ public:
 	void Update(Node*, Node*);
 	void Render(sf::RenderWindow* window);
 
+	// Position in array
+	sf::Vector2i gridPos;
+	// Getters and Setters
 	sf::Vector2f GetWorldPos() { return worldPos; }
 	sf::Vector2f GetSize() { return size; }
+	int GetFCost() { return fCost; }
+	int GetGCost() { return gCost; }
+	int GetHCost() { return hCost; }
 	void SetWorldPos(sf::Vector2f nextWorldPos) { worldPos = nextWorldPos; }
 	void SetSize(sf::Vector2f nextSize) { size = nextSize; }
-	// Neighbours
-	Node* northAdj;
-	Node* eastAdj;
-	Node* southAdj;
-	Node* westAdj;
-	Node* northWestAdj;
-	Node* northEastAdj;
-	Node* southWestAdj;
-	Node* southEastAdj;
+	// Neighbours 
+	std::vector<Node*> neighboursOrth;
+	std::vector<Node*> neighboursDiag;
 	// Shape
 	sf::RectangleShape shape;
 	// Font
 	sf::Font* font;
-	// Position in array
-	sf::Vector2i gridPos;
 	// Calculate gCost, hCost, fCost
+	void CalculateFGH(Node*, Node*);
+	int CalculateF();
 	int CalculateG(Node*);
 	int CalculateH(Node*);
 private:

@@ -12,7 +12,7 @@ void Node::Init(sf::Vector2f initWorldPos, sf::Vector2f initSize, sf::Vector2i g
 	font = myFont;
 	// Init gCost text
 	gCostText.setFont(*font);
-	gCostText.setString(std::to_string(gridPos.x));
+	gCostText.setString("");
 	gCostText.setFillColor(sf::Color::Black);
 	sf::Vector2f tempPos = worldPos;
 	tempPos.x += 10.0f;
@@ -20,13 +20,13 @@ void Node::Init(sf::Vector2f initWorldPos, sf::Vector2f initSize, sf::Vector2i g
 	gCostText.setPosition(sf::Vector2f(tempPos));
 	// Init hCost text
 	hCostText.setFont(*font);
-	hCostText.setString(std::to_string(gridPos.x));
+	hCostText.setString("");
 	hCostText.setFillColor(sf::Color::Black);
 	tempPos.x += 200.0f;
 	hCostText.setPosition(sf::Vector2f(tempPos));
 	// Init fCost text
 	fCostText.setFont(*font);
-	fCostText.setString(std::to_string(gridPos.x));
+	fCostText.setString("");
 	fCostText.setFillColor(sf::Color::Black);
 	tempPos.x = worldPos.x + (size.x * 0.45f);
 	tempPos.y = worldPos.y + (size.y * 0.5f);
@@ -38,11 +38,11 @@ void Node::Update(Node* startNode, Node* endNode)
 	shape.setSize(size);
 	shape.setPosition(worldPos);
 	// Clear colour
-	shape.setFillColor(sf::Color::White);
-	// Calculate gCost
+	//shape.setFillColor(sf::Color::White);
+
+	// If this is the start node, colour green
 	if (startNode)
 	{
-		// If this is the start node, colour green
 		if (startNode->gridPos == gridPos)
 		{
 			shape.setFillColor(sf::Color::Green);
@@ -50,14 +50,11 @@ void Node::Update(Node* startNode, Node* endNode)
 			hCostText.setString("");
 			fCostText.setString("A");
 		}
-		// If not, calculate distance to start node
-		else
-			gCost = CalculateG(startNode);
 	}
-	// Calculate hCost
+
+	// If this is the end node, colour red
 	if (endNode)
 	{
-		// If this is the end node, colour red
 		if (endNode->gridPos == gridPos)
 		{
 			shape.setFillColor(sf::Color::Red);
@@ -65,24 +62,16 @@ void Node::Update(Node* startNode, Node* endNode)
 			hCostText.setString("");
 			fCostText.setString("B");
 		}
-		// If not, calculate distance to end node
-		else
-			hCost = CalculateH(endNode);
-	}
-	// Calculate fCost
-	if (startNode && endNode)
-	{
-		fCost = gCost + hCost;
 	}
 
 	// Only render costs if it is not the start or end node
-	if (startNode && endNode)
+	/*if (startNode && endNode)
 		if (startNode->gridPos != gridPos && endNode->gridPos != gridPos)
 		{
 			fCostText.setString(std::to_string(fCost));
 			gCostText.setString(std::to_string(gCost));
 			hCostText.setString(std::to_string(hCost));
-		}
+		}*/
 }
 
 void Node::Render(sf::RenderWindow* window)
@@ -92,6 +81,40 @@ void Node::Render(sf::RenderWindow* window)
 	window->draw(hCostText);
 	window->draw(fCostText);
 }
+
+void Node::CalculateFGH(Node* startNode, Node* endNode)
+{
+	// If not start or end node work out distances
+	if (startNode->gridPos != gridPos || endNode->gridPos != gridPos)
+	{
+		gCost = CalculateG(startNode);
+		hCost = CalculateH(endNode);
+		fCost = CalculateF();
+
+		// Update text for render
+		fCostText.setString(std::to_string(fCost));
+		gCostText.setString(std::to_string(gCost));
+		hCostText.setString(std::to_string(hCost));
+	}
+}
+
+//int Node::CalculateG(Node* lastNode)
+//{
+//	// If horizontal or vertical neighbour to the last node, add 10
+//	for (auto& it : neighboursOrth)
+//	{
+//		if (lastNode == it)
+//			return lastNode->GetGCost() + 10;
+//	}
+//	// If diagonal neighbour to the last node, add 14
+//	for (auto& it : neighboursDiag)
+//	{
+//		if (lastNode == it)
+//			return lastNode->GetGCost() + 14;
+//	}
+//
+//	return 0;
+//}
 
 int Node::CalculateG(Node* startNode)
 {
@@ -109,7 +132,7 @@ int Node::CalculateG(Node* startNode)
 	else
 		greaterDistance = xDistance;
 	// Work out number of diagonals
-		int diagonalsNum = greaterDistance - abs(xDistance - yDistance);
+	int diagonalsNum = greaterDistance - abs(xDistance - yDistance);
 
 	return ((greaterDistance - diagonalsNum) * 10) + (diagonalsNum * 14);
 }
@@ -133,4 +156,9 @@ int Node::CalculateH(Node* endNode)
 	int diagonalsNum = greaterDistance - abs(xDistance - yDistance);
 
 	return (greaterDistance - diagonalsNum) * 10 + (diagonalsNum * 14);
+}
+
+int Node::CalculateF()
+{
+	return gCost + hCost;
 }

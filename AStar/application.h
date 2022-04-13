@@ -13,11 +13,16 @@ public:
 	void Render();
 	void InitGrid();
 	void FindGridSquareCollision(sf::RenderWindow*, bool);
+	void FindPath();
 
 	const static int gridWidth = 5;
 	const static int gridHeight = 4;
 	const float shapeWidth = WINDOW_WIDTH / gridWidth;
 	const float shapeHeight = WINDOW_HEIGHT / gridHeight;
+	bool findingPath = false;
+	std::vector<Node*> path;
+	std::vector<Node*> visitedNodes;
+	std::vector<Node*> examinedNodes;
 	Node grid[gridWidth][gridHeight];
 	Node* startNode;
 	Node* endNode;
