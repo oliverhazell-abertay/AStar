@@ -1,6 +1,9 @@
 #include "application.h"
 #include <iostream>
 #include <algorithm>
+#include <thread>
+#include <chrono>
+
 
 void Application::Init(sf::RenderWindow* wind)
 {
@@ -26,6 +29,7 @@ int Application::Update()
 
     while (window->isOpen())
     {
+        window->setKeyRepeatEnabled(false);
         sf::Event event;
         while (window->pollEvent(event))
         {
@@ -35,24 +39,34 @@ int Application::Update()
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape))
                 window->close();
             // Space bar - Find path between nodes
-            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Space))
+            if (event.type == sf::Event::KeyReleased)
             {
-                if (!findingPath && startNode && endNode)
+                if (event.key.code == sf::Keyboard::Space)
                 {
-                    findingPath = true;
+                    if (startNode && endNode)
+                    {
+                        std::cout << "Space bar pressed\n";
                         FindPath();
-                    findingPath = false;
+                    }
                 }
             }
-            // Left Mouse button - Change grid square to green
+            // R - Reset grid
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::R))
+                InitGrid();
+            // Left Mouse button - Assign start node
             if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
             {
-                FindGridSquareCollision(window, true);
+                FindGridSquareCollision(window, 0);
             }
-            // Right Mouse button - Change grid square to white
+            // Right Mouse button - Assign end node
             if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
             {
-                FindGridSquareCollision(window, false);
+                FindGridSquareCollision(window, 1);
+            }
+            // Middle Mouse button - Assign obstacle
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Middle))
+            {
+                FindGridSquareCollision(window, 2);
             }
         }
         // Update nodes
@@ -125,7 +139,7 @@ void Application::InitGrid()
     }
 }
 
-void Application::FindGridSquareCollision(sf::RenderWindow* window, bool leftClick)
+void Application::FindGridSquareCollision(sf::RenderWindow* window, int nodeType)
 {
     auto mouse_pos = sf::Mouse::getPosition(*window); // Mouse position relative to the window
     auto translated_pos = window->mapPixelToCoords(mouse_pos); // Mouse position translated into world coordinates
@@ -137,112 +151,115 @@ void Application::FindGridSquareCollision(sf::RenderWindow* window, bool leftCli
             if (grid[i][j].shape.getGlobalBounds().contains(translated_pos))
             {
                 // If left clicked, make start node
-                if (leftClick)
+                if (nodeType == 0)
                     startNode = &grid[i][j];
-                // If not then it was right clicked, make end node
-                else
+                // If right clicked, make end node
+                else if (nodeType == 1)
                     endNode = &grid[i][j];
+                // If middle clicked, make obstacle
+                else if (nodeType == 2)
+                    grid[i][j].obstacle = true;
+                // If none of the above, throw error
+                else if (nodeType > 2 || nodeType < 0)
+                    std::cout << "Node type is outside bounds!";
             }
         }
     }
 }
 
+// Helper function to find lowest f cost
+bool Application::CompareF(Node* n1, Node* n2)
+{
+    return n1->GetFCost() < n2->GetFCost();
+}
+
 void Application::FindPath()
 {
-    Node* currentNode;
-    currentNode = startNode;
-    while (currentNode != endNode)
+    // Add start node to open
+    openNodes.push_back(startNode);
+    Node* currentNode = *openNodes.begin();
+    bool pathFound = false;
+    // Loop to find path
+    while (!pathFound)
     {
-        // Calculate FGH for neighbours of current node
-        for (auto& it : currentNode->neighboursOrth)
-        {
-            // If not already visited
-            if (std::find(visitedNodes.begin(), visitedNodes.end(), it) == visitedNodes.end())
-            {
-                it->CalculateFGH(startNode, endNode);
-                // Add neighbour to visited nodes if not already visited
-                visitedNodes.push_back(it);
-            }
-        }
-        for (auto& it : currentNode->neighboursDiag)
-        {
-            // If not already visited
-            if (std::find(visitedNodes.begin(), visitedNodes.end(), it) == visitedNodes.end())
-            {
-                it->CalculateFGH(startNode, endNode);
-                // Add neighbour to visited nodes
-                if (std::find(visitedNodes.begin(), visitedNodes.end(), it) == visitedNodes.end())
-                    visitedNodes.push_back(it);
-            }
-        }
-
-        // Add current node to examined
-        examinedNodes.push_back(currentNode);
-
-        // Find node with lowest f value in grid that hasn't been examined
         int lowestF = 1000000;
-        for (auto& it : visitedNodes)
+        // Find node with lowest f cost
+        for (auto& it : openNodes)
         {
-            // If not already visited
-            if (std::find(examinedNodes.begin(), examinedNodes.end(), it) == examinedNodes.end())
+            // If f cost is lowest so far
+            if (it->GetFCost() < lowestF)
             {
-                if (it->GetFCost() != 0 && it->GetFCost() < lowestF)
+                currentNode = it;
+                lowestF = it->GetFCost();
+            }
+            // If f cost is equal, check if h cost is lower
+            else if (it->GetFCost() == lowestF && it->GetHCost() < currentNode->GetHCost())
+            {
+                currentNode = it;
+                lowestF = it->GetFCost();
+            }
+        }
+        // Remove lowest f node from open, add to closed
+        if (std::find(openNodes.begin(), openNodes.end(), currentNode) != openNodes.end())
+           openNodes.remove(currentNode);
+        if (std::find(closedNodes.begin(), closedNodes.end(), currentNode) == closedNodes.end())
+         closedNodes.push_back(currentNode);
+        
+        // If current node is the target node, path found
+        if (currentNode == endNode)
+            pathFound = true;
+        // If not, carry on searching using lowest f node
+        else
+        {
+            // Calculate distance to each neighbour node
+            // Orthogonal neighbours
+            for (auto& it : currentNode->neighboursOrth)
+            {
+                if (it == endNode)
                 {
-                    currentNode = it;
-                    lowestF = currentNode->GetFCost();
+                    it->parent = currentNode;
+                    pathFound = true;
+                }
+                // If neighbour isn't an obstacle or in closed
+                else if (!it->obstacle && std::find(closedNodes.begin(), closedNodes.end(), it) == closedNodes.end())
+                {
+                    // If neighbour isn't in open or new path to neighbour is shorter
+                    if (std::find(openNodes.begin(), openNodes.end(), it) == openNodes.end() || (it->GetFCost() + 10) < it->GetFCost())
+                    {
+                        it->CalculateFGH(startNode, endNode);
+                        it->parent = currentNode;
+                        // If neighbour isn't in open, add it
+                        if (std::find(openNodes.begin(), openNodes.end(), it) == openNodes.end())
+                            openNodes.push_back(it);
+                    }
+                }
+            }
+            // Diagonal neighbours
+            for (auto& it : currentNode->neighboursDiag)
+            {
+                // If neighbour isn't an obstacle or in closed
+                if (!it->obstacle && std::find(closedNodes.begin(), closedNodes.end(), it) == closedNodes.end())
+                {
+                    // If neighbour isn't in open or new path to neighbour is shorter
+                    if (std::find(openNodes.begin(), openNodes.end(), it) == openNodes.end() || (it->GetFCost() + 14) < it->GetFCost())
+                    {
+                        it->CalculateFGH(startNode, endNode);
+                        it->parent = currentNode;
+                        // If neighbour isn't in open, add it
+                        if (std::find(openNodes.begin(), openNodes.end(), it) == openNodes.end())
+                            openNodes.push_back(it);
+                    }
                 }
             }
         }
+        Render();
     }
 
-    // End node found, start at the end node and find shortest route back
+    // Colour path
     currentNode = endNode;
-    Node* nextNode = currentNode;
     while (currentNode != startNode)
     {
-        // Find lowest f value of neighbour of current node
-        int lowestF = 100000;
-        for (auto& it : currentNode->neighboursOrth)
-        {
-            // Check if neighbour is start node
-            if (it == startNode)
-                currentNode = it;
-            // Check neighbour isn't already in path
-            else if (std::find(path.begin(), path.end(), it) == path.end())
-            {
-                if (it->GetFCost() != 0 && it->GetFCost() < lowestF)
-                {
-                    lowestF = it->GetFCost();
-                    nextNode = it;
-                }
-            }
-        }
-        for (auto& it : currentNode->neighboursDiag)
-        {
-            // Check if neighbour is start node
-            if (it == startNode)
-                currentNode = it;
-            // Check neighbour isn't already in path
-            else if (std::find(path.begin(), path.end(), it) == path.end())
-            {
-                if (it->GetFCost() != 0 && it->GetFCost() < lowestF)
-                {
-                    lowestF = it->GetFCost();
-                    nextNode = it;
-                }
-            }
-        }
-        // If we're not at the start node, add node to path
-        if (currentNode != startNode)
-        {
-            path.push_back(currentNode);
-            // Prepare for next loop
-            currentNode = nextNode;
-        }
-    }
-    // Colour path
-    for (auto& it : path)
-    {
-        it->shape.setFillColor(sf::Color::Yellow);
+        currentNode->shape.setFillColor(sf::Color::Blue);
+        currentNode = currentNode->parent;
     }
 }

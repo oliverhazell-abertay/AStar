@@ -22,6 +22,7 @@ public:
 	// Neighbours 
 	std::vector<Node*> neighboursOrth;
 	std::vector<Node*> neighboursDiag;
+	Node* parent;
 	// Shape
 	sf::RectangleShape shape;
 	// Font
@@ -31,6 +32,8 @@ public:
 	int CalculateF();
 	int CalculateG(Node*);
 	int CalculateH(Node*);
+	// Flags
+	bool obstacle;
 private:
 	sf::Vector2f worldPos;
 	sf::Vector2f size;

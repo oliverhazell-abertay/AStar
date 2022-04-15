@@ -22,13 +22,13 @@ void Node::Init(sf::Vector2f initWorldPos, sf::Vector2f initSize, sf::Vector2i g
 	hCostText.setFont(*font);
 	hCostText.setString("");
 	hCostText.setFillColor(sf::Color::Black);
-	tempPos.x += 200.0f;
+	tempPos.x += size.x * 0.65f;
 	hCostText.setPosition(sf::Vector2f(tempPos));
 	// Init fCost text
 	fCostText.setFont(*font);
 	fCostText.setString("");
 	fCostText.setFillColor(sf::Color::Black);
-	tempPos.x = worldPos.x + (size.x * 0.45f);
+	tempPos.x = worldPos.x + (size.x * 0.4f);
 	tempPos.y = worldPos.y + (size.y * 0.5f);
 	fCostText.setPosition(sf::Vector2f(tempPos));
 }
@@ -62,6 +62,15 @@ void Node::Update(Node* startNode, Node* endNode)
 			hCostText.setString("");
 			fCostText.setString("B");
 		}
+	}
+
+	// If this is an obstacle, colour black
+	if (obstacle)
+	{
+		shape.setFillColor(sf::Color::Black);
+		gCostText.setString("");
+		hCostText.setString("");
+		fCostText.setString("");
 	}
 
 	// Only render costs if it is not the start or end node

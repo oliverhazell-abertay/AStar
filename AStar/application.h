@@ -1,8 +1,9 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 #include "node.h"
-#define WINDOW_WIDTH 1280
-#define WINDOW_HEIGHT 720
+#include <list>
+#define WINDOW_WIDTH 1600
+#define WINDOW_HEIGHT 900
 
 class Application
 {
@@ -12,17 +13,18 @@ public:
 	int Update();
 	void Render();
 	void InitGrid();
-	void FindGridSquareCollision(sf::RenderWindow*, bool);
+	void FindGridSquareCollision(sf::RenderWindow*, int);
 	void FindPath();
+	bool CompareF(Node*, Node*);
 
-	const static int gridWidth = 5;
-	const static int gridHeight = 4;
+	const static int gridWidth = 10;
+	const static int gridHeight = 6;
 	const float shapeWidth = WINDOW_WIDTH / gridWidth;
 	const float shapeHeight = WINDOW_HEIGHT / gridHeight;
 	bool findingPath = false;
 	std::vector<Node*> path;
-	std::vector<Node*> visitedNodes;
-	std::vector<Node*> examinedNodes;
+	std::list<Node*> openNodes;
+	std::list<Node*> closedNodes;
 	Node grid[gridWidth][gridHeight];
 	Node* startNode;
 	Node* endNode;
