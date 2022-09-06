@@ -17,8 +17,8 @@ public:
 	void FindPath();
 	bool CompareF(Node*, Node*);
 
-	const static int gridWidth = 10;
-	const static int gridHeight = 6;
+	const static int gridWidth = 19;
+	const static int gridHeight = 11;
 	const float shapeWidth = WINDOW_WIDTH / gridWidth;
 	const float shapeHeight = WINDOW_HEIGHT / gridHeight;
 	bool findingPath = false;

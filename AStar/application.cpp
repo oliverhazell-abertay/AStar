@@ -9,6 +9,8 @@ void Application::Init(sf::RenderWindow* wind)
 {
     window = wind;
     myFont.loadFromFile("C:\\Users\\olive\\Documents\\Portfolio\\AStar\\AStar\\Fonts\\OpenSans-Light.ttf");
+    // Init grid
+    InitGrid();
 }
 
 void Application::CleanUp()
@@ -24,11 +26,9 @@ void Application::CleanUp()
 
 int Application::Update()
 {
-    // Init grid
-    InitGrid();
-
     while (window->isOpen())
     {
+        // Input
         window->setKeyRepeatEnabled(false);
         sf::Event event;
         while (window->pollEvent(event))
@@ -45,8 +45,11 @@ int Application::Update()
                 {
                     if (startNode && endNode)
                     {
-                        std::cout << "Space bar pressed\n";
-                        FindPath();
+                        auto start = std::chrono::system_clock::now();
+                            FindPath();
+                        auto end = std::chrono::system_clock::now();
+                        auto elasped = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+                        std::cout << elasped.count() << '\n';
                     }
                 }
             }
@@ -252,7 +255,6 @@ void Application::FindPath()
                 }
             }
         }
-        Render();
     }
 
     // Colour path

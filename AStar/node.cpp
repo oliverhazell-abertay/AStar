@@ -15,20 +15,20 @@ void Node::Init(sf::Vector2f initWorldPos, sf::Vector2f initSize, sf::Vector2i g
 	gCostText.setString("");
 	gCostText.setFillColor(sf::Color::Black);
 	sf::Vector2f tempPos = worldPos;
-	tempPos.x += 10.0f;
-	tempPos.y += 10.0f;
+	tempPos.x += 1.0f;
+	tempPos.y += 1.0f;
 	gCostText.setPosition(sf::Vector2f(tempPos));
 	// Init hCost text
 	hCostText.setFont(*font);
 	hCostText.setString("");
 	hCostText.setFillColor(sf::Color::Black);
-	tempPos.x += size.x * 0.65f;
+	tempPos.x += size.x * 0.5f;
 	hCostText.setPosition(sf::Vector2f(tempPos));
 	// Init fCost text
 	fCostText.setFont(*font);
 	fCostText.setString("");
 	fCostText.setFillColor(sf::Color::Black);
-	tempPos.x = worldPos.x + (size.x * 0.4f);
+	tempPos.x = worldPos.x + (size.x * 0.3f);
 	tempPos.y = worldPos.y + (size.y * 0.5f);
 	fCostText.setPosition(sf::Vector2f(tempPos));
 }
