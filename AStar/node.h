@@ -17,12 +17,13 @@ public:
 	int GetFCost() { return fCost; }
 	int GetGCost() { return gCost; }
 	int GetHCost() { return hCost; }
+	inline void SetGCost(int nextG) { gCost = nextG; }
 	void SetWorldPos(sf::Vector2f nextWorldPos) { worldPos = nextWorldPos; }
 	void SetSize(sf::Vector2f nextSize) { size = nextSize; }
 	// Neighbours 
-	std::vector<Node*> neighboursOrth;
-	std::vector<Node*> neighboursDiag;
-	Node* parent;
+	std::vector<sf::Vector2i> neighboursOrth;
+	std::vector<sf::Vector2i> neighboursDiag;
+	int parentX, parentY;
 	// Shape
 	sf::RectangleShape shape;
 	// Font

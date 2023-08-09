@@ -10,6 +10,11 @@ void Node::Init(sf::Vector2f initWorldPos, sf::Vector2f initSize, sf::Vector2i g
 	size = initSize;
 	gridPos = gridPosition;
 	font = myFont;
+	// Init fCost to max to flag node hasn't been examined
+	fCost = -1;
+	// Init h and g to max
+	gCost = 0;
+	hCost = 0;
 	// Init gCost text
 	gCostText.setFont(*font);
 	gCostText.setString("");
@@ -72,15 +77,6 @@ void Node::Update(Node* startNode, Node* endNode)
 		hCostText.setString("");
 		fCostText.setString("");
 	}
-
-	// Only render costs if it is not the start or end node
-	/*if (startNode && endNode)
-		if (startNode->gridPos != gridPos && endNode->gridPos != gridPos)
-		{
-			fCostText.setString(std::to_string(fCost));
-			gCostText.setString(std::to_string(gCost));
-			hCostText.setString(std::to_string(hCost));
-		}*/
 }
 
 void Node::Render(sf::RenderWindow* window)
@@ -96,9 +92,9 @@ void Node::CalculateFGH(Node* startNode, Node* endNode)
 	// If not start or end node work out distances
 	if (startNode->gridPos != gridPos || endNode->gridPos != gridPos)
 	{
-		gCost = CalculateG(startNode);
-		hCost = CalculateH(endNode);
-		fCost = CalculateF();
+		//gCost = CalculateG(startNode);
+		//hCost = CalculateH(endNode);
+		//fCost = CalculateF();
 
 		// Update text for render
 		fCostText.setString(std::to_string(fCost));
@@ -106,24 +102,6 @@ void Node::CalculateFGH(Node* startNode, Node* endNode)
 		hCostText.setString(std::to_string(hCost));
 	}
 }
-
-//int Node::CalculateG(Node* lastNode)
-//{
-//	// If horizontal or vertical neighbour to the last node, add 10
-//	for (auto& it : neighboursOrth)
-//	{
-//		if (lastNode == it)
-//			return lastNode->GetGCost() + 10;
-//	}
-//	// If diagonal neighbour to the last node, add 14
-//	for (auto& it : neighboursDiag)
-//	{
-//		if (lastNode == it)
-//			return lastNode->GetGCost() + 14;
-//	}
-//
-//	return 0;
-//}
 
 int Node::CalculateG(Node* startNode)
 {
@@ -142,6 +120,9 @@ int Node::CalculateG(Node* startNode)
 		greaterDistance = xDistance;
 	// Work out number of diagonals
 	int diagonalsNum = greaterDistance - abs(xDistance - yDistance);
+
+	// Update text for render
+	gCostText.setString(std::to_string(gCost));
 
 	return ((greaterDistance - diagonalsNum) * 10) + (diagonalsNum * 14);
 }
@@ -164,10 +145,20 @@ int Node::CalculateH(Node* endNode)
 	// Work out number of diagonals
 	int diagonalsNum = greaterDistance - abs(xDistance - yDistance);
 
+	// Set hCost
+	hCost = (greaterDistance - diagonalsNum) * 10 + (diagonalsNum * 14);
+	// Update text for render
+	gCostText.setString(std::to_string(gCost));
+
 	return (greaterDistance - diagonalsNum) * 10 + (diagonalsNum * 14);
 }
 
 int Node::CalculateF()
 {
+	// Calculate cost
+	fCost = gCost + hCost;
+	// Update text for render
+	gCostText.setString(std::to_string(gCost));
+	fCostText.setString(std::to_string(fCost));
 	return gCost + hCost;
 }

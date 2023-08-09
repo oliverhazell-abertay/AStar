@@ -4,6 +4,8 @@
 #include <thread>
 #include <chrono>
 
+#define ORTH_COST 10
+#define DIAG_COST 14
 
 void Application::Init(sf::RenderWindow* wind)
 {
@@ -17,6 +19,7 @@ void Application::CleanUp()
 {
     delete window;
     window = NULL;
+
     delete startNode;
     startNode = NULL;
 
@@ -45,11 +48,20 @@ int Application::Update()
                 {
                     if (startNode && endNode)
                     {
-                        auto start = std::chrono::system_clock::now();
-                            FindPath();
-                        auto end = std::chrono::system_clock::now();
-                        auto elasped = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-                        std::cout << elasped.count() << '\n';
+                        auto start = chrono::system_clock::now();
+                        if (FindPath())
+                        {
+                            cout << "Path found!\n";
+                        }
+                        else
+                        {
+                            cout << "Returned false!\n";
+                        }
+                            
+                        auto end = chrono::system_clock::now();
+                        auto elasped = chrono::duration_cast<chrono::milliseconds>(end - start);
+                        cout << elasped.count() << '\n';
+                        ColourPath();
                     }
                 }
             }
@@ -113,31 +125,30 @@ void Application::InitGrid()
             grid[i][j].shape.setOutlineColor(sf::Color::Black);
             grid[i][j].shape.setOutlineThickness(5.0f);
             // Neighbours
-            //North
+            // North
             if (j > 0)
-                grid[i][j].neighboursOrth.push_back(&grid[i][j - 1]);
+                grid[i][j].neighboursOrth.push_back(sf::Vector2i(i, j - 1));
             // South
             if (j < gridHeight - 1)
-                grid[i][j].neighboursOrth.push_back(&grid[i][j + 1]);
+                grid[i][j].neighboursOrth.push_back(sf::Vector2i(i, j + 1));
             // East
             if (i < gridWidth - 1)
-                grid[i][j].neighboursOrth.push_back(&grid[i + 1][j]);
+                grid[i][j].neighboursOrth.push_back(sf::Vector2i(i + 1, j));
             // West
             if (i > 0)
-                grid[i][j].neighboursOrth.push_back(&grid[i - 1][j]);
-            //North west
+                grid[i][j].neighboursOrth.push_back(sf::Vector2i(i - 1, j));
+            // North west
             if(i > 0 && j > 0)
-                grid[i][j].neighboursDiag.push_back(&grid[i - 1][j - 1]);
-            //North east
+                grid[i][j].neighboursDiag.push_back(sf::Vector2i(i - 1, j - 1));
+            // North east
             if (i < gridWidth - 1 && j > 0)
-                grid[i][j].neighboursDiag.push_back(&grid[i + 1][j - 1]);
-            //South west
+                grid[i][j].neighboursDiag.push_back(sf::Vector2i(i + 1, j - 1));
+            // South west
             if (i > 0 && j < gridHeight - 1)
-                grid[i][j].neighboursDiag.push_back(&grid[i - 1][j + 1]);
-            //South east
+                grid[i][j].neighboursDiag.push_back(sf::Vector2i(i - 1, j + 1));
+            // South east
             if (i < gridWidth - 1 && j < gridHeight - 1)
-                grid[i][j].neighboursDiag.push_back(&grid[i + 1][j + 1]);
-
+                grid[i][j].neighboursDiag.push_back(sf::Vector2i(i + 1, j + 1));
         }
     }
 }
@@ -164,104 +175,136 @@ void Application::FindGridSquareCollision(sf::RenderWindow* window, int nodeType
                     grid[i][j].obstacle = true;
                 // If none of the above, throw error
                 else if (nodeType > 2 || nodeType < 0)
-                    std::cout << "Node type is outside bounds!";
+                    cout << "Node type is outside bounds!";
             }
         }
     }
 }
 
-// Helper function to find lowest f cost
-bool Application::CompareF(Node* n1, Node* n2)
-{
-    return n1->GetFCost() < n2->GetFCost();
-}
-
-void Application::FindPath()
+bool Application::FindPath()
 {
     // Add start node to open
-    openNodes.push_back(startNode);
-    Node* currentNode = *openNodes.begin();
+    startNode->CalculateF();
+    openNodes.insert(make_pair(startNode->GetFCost(), make_pair(startNode->gridPos.x, startNode->gridPos.y)));
+    Node* currentNode;
     bool pathFound = false;
+    // Init closed list 
+    for (int i = 0; i < gridWidth; i++)
+    {
+        for (int j = 0; j < gridHeight; j++)
+        {
+            closedNodes[gridWidth][gridHeight] = false;
+        }
+    }
     // Loop to find path
     while (!pathFound)
     {
-        int lowestF = 1000000;
-        // Find node with lowest f cost
-        for (auto& it : openNodes)
+        // If openNodes are empty, no path is possible
+        if (openNodes.empty())
         {
-            // If f cost is lowest so far
-            if (it->GetFCost() < lowestF)
-            {
-                currentNode = it;
-                lowestF = it->GetFCost();
-            }
-            // If f cost is equal, check if h cost is lower
-            else if (it->GetFCost() == lowestF && it->GetHCost() < currentNode->GetHCost())
-            {
-                currentNode = it;
-                lowestF = it->GetFCost();
-            }
+            cout << "No path possible!\n";
+            return pathFound;
         }
-        // Remove lowest f node from open, add to closed
-        if (std::find(openNodes.begin(), openNodes.end(), currentNode) != openNodes.end())
-           openNodes.remove(currentNode);
-        if (std::find(closedNodes.begin(), closedNodes.end(), currentNode) == closedNodes.end())
-         closedNodes.push_back(currentNode);
-        
+        // Take node with lowest f cost
+        pPair p = *openNodes.begin();
+        int i = p.second.first;
+        int j = p.second.second;
+        currentNode = &grid[i][j];
+        // Remove from open, add to closed
+        openNodes.erase(openNodes.begin());
+        closedNodes[i][j] = true;
         // If current node is the target node, path found
         if (currentNode == endNode)
+        {
             pathFound = true;
-        // If not, carry on searching using lowest f node
+        }
+        // If not, add neighbours of current node to open list
         else
         {
             // Calculate distance to each neighbour node
             // Orthogonal neighbours
             for (auto& it : currentNode->neighboursOrth)
             {
-                if (it == endNode)
+                Node* examNode = &grid[it.x][it.y];
+                // If neighbour isn't an obstacle or in closed list
+                if (!examNode->obstacle && !closedNodes[it.x][it.y])
                 {
-                    it->parent = currentNode;
-                    pathFound = true;
-                }
-                // If neighbour isn't an obstacle or in closed
-                else if (!it->obstacle && std::find(closedNodes.begin(), closedNodes.end(), it) == closedNodes.end())
-                {
-                    // If neighbour isn't in open or new path to neighbour is shorter
-                    if (std::find(openNodes.begin(), openNodes.end(), it) == openNodes.end() || (it->GetFCost() + 10) < it->GetFCost())
+                    // If neighbour isn't in open, add to open and make parent
+                    if (examNode->GetFCost() == -1)
                     {
-                        it->CalculateFGH(startNode, endNode);
-                        it->parent = currentNode;
-                        // If neighbour isn't in open, add it
-                        if (std::find(openNodes.begin(), openNodes.end(), it) == openNodes.end())
-                            openNodes.push_back(it);
+                        // Calculate values
+                        examNode->SetGCost(currentNode->GetGCost() + ORTH_COST);
+                        examNode->CalculateH(endNode);
+                        examNode->CalculateF();
+                        // Add parent to currentnode
+                        examNode->parentX = currentNode->gridPos.x;
+                        examNode->parentY = currentNode->gridPos.y;
+                        // Add to open list
+                        pPair tempPair = make_pair(examNode->GetFCost(), make_pair(examNode->gridPos.x, examNode->gridPos.y));
+                        openNodes.insert(tempPair);
+                    }
+                    // If neighbour is already on open list, check if current node is better path
+                    else
+                    {
+                        // If path to current node is better than original g cost, set parent to current
+                        if (examNode->GetGCost() > currentNode->GetGCost() + ORTH_COST)
+                        {
+                            examNode->SetGCost(currentNode->GetGCost() + ORTH_COST);
+                            examNode->CalculateF();
+                            examNode->parentX = currentNode->gridPos.x;
+                            examNode->parentY = currentNode->gridPos.y;
+                        }
                     }
                 }
             }
             // Diagonal neighbours
-            for (auto& it : currentNode->neighboursDiag)
+            for (auto it : currentNode->neighboursDiag)
             {
-                // If neighbour isn't an obstacle or in closed
-                if (!it->obstacle && std::find(closedNodes.begin(), closedNodes.end(), it) == closedNodes.end())
+                Node* examNode = &grid[it.x][it.y];
+                // If neighbour isn't an obstacle or in closed list
+                if (!examNode->obstacle && !closedNodes[it.x][it.y])
                 {
-                    // If neighbour isn't in open or new path to neighbour is shorter
-                    if (std::find(openNodes.begin(), openNodes.end(), it) == openNodes.end() || (it->GetFCost() + 14) < it->GetFCost())
+                    // If neighbour isn't in open, add to open and make parent
+                    if (examNode->GetFCost() == -1)
                     {
-                        it->CalculateFGH(startNode, endNode);
-                        it->parent = currentNode;
-                        // If neighbour isn't in open, add it
-                        if (std::find(openNodes.begin(), openNodes.end(), it) == openNodes.end())
-                            openNodes.push_back(it);
+                        // Calculate values
+                        examNode->SetGCost(currentNode->GetGCost() + DIAG_COST);
+                        examNode->CalculateH(endNode);
+                        examNode->CalculateF();
+                        // Add parent to currentnode
+                        examNode->parentX = currentNode->gridPos.x;
+                        examNode->parentY = currentNode->gridPos.y;
+                        // Add to open list
+                        pPair tempPair = make_pair(examNode->GetFCost(), make_pair(examNode->gridPos.x, examNode->gridPos.y));
+                        openNodes.insert(tempPair);
+                    }
+                    // If neighbour is already on open list, check if current node is better path
+                    else
+                    {
+                        // If path to current node is better than original g cost, set parent to current
+                        if (examNode->GetGCost() > currentNode->GetGCost() + DIAG_COST)
+                        {
+                            examNode->SetGCost(currentNode->GetGCost() + DIAG_COST);
+                            examNode->CalculateF();
+                            examNode->parentX = currentNode->gridPos.x;
+                            examNode->parentY = currentNode->gridPos.y;
+                        }
                     }
                 }
             }
         }
     }
+    // If it made it out the loop, path found
+    return true;
+}
 
+void Application::ColourPath()
+{
     // Colour path
-    currentNode = endNode;
+    Node* currentNode = endNode;
     while (currentNode != startNode)
     {
         currentNode->shape.setFillColor(sf::Color::Blue);
-        currentNode = currentNode->parent;
+        currentNode = &grid[currentNode->parentX][currentNode->parentY];
     }
 }

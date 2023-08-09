@@ -154,10 +154,12 @@
     <ClCompile Include="application.cpp" />
     <ClCompile Include="AStar.cpp" />
     <ClCompile Include="node.cpp" />
+    <ClCompile Include="priorityQueue.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="application.h" />
     <ClInclude Include="node.h" />
+    <ClInclude Include="priorityQueue.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
